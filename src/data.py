@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import requests
 from tqdm import tqdm
+from requests.exceptions import HTTPError
 
 from src.paths import RAW_DATA_DIR
 
@@ -20,15 +21,15 @@ def download_one_file_of_raw_data(year: int, month: int) -> Path:
     taxi trips database.
     """
 
-    URL = f'https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_{year}-{month:02d}.parquet'
-    response = requests.get(URL)
+    url = f'https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_{year}-{month:02d}.parquet'
+    response = requests.get(url, timeout=60)
 
     if response.status_code == 200:
         path = RAW_DATA_DIR / f'rides_{year}-{month:02d}.parquet'
         open(path, 'wb').write(response.content)
         return path
     else:
-        raise Exception(f'{URL} is not available.')
+        raise HTTPError(f'{url} is not available.')
 
 def validate_raw_data(
        rides: pd.DataFrame,
@@ -115,7 +116,7 @@ def load_raw_data(
                 # download the file from the NYC website
                 print(f'Downloading file {year}-{month:02d}')
                 download_one_file_of_raw_data(year, month)
-            except:
+            except FileNotFoundError:
                 print(f'{year}-{month:02d} file is not available')
                 continue
         else:
@@ -245,7 +246,7 @@ def transform_ts_data_into_features_and_target(
         features_one_location['pickup_location_id'] = location_id
 
         # numpy -> pandas
-        targets_one_location = pd.DataFrame(y, columns=[f'target_rides_next_hour'])
+        targets_one_location = pd.DataFrame(y, columns=['target_rides_next_hour'])
 
         # concatenate results
         features = pd.concat([features, features_one_location])
