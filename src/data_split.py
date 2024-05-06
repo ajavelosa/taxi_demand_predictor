@@ -11,10 +11,10 @@ def train_test_split(
     """
     Splits data into train and test sets.
     """
-    train_data = df[df.pickup_hour < cutoff_date].reset_index(drop=True)
-    test_data = df[df.pickup_hour >= cutoff_date].reset_index(drop=True)
 
-    X_train, y_train = train_data.drop(columns=[target_column_name]), train_data[target_column_name]
-    X_test, y_test = test_data.drop(columns=[target_column_name]), test_data[target_column_name]
+    mask = df['pickup_hour'] < cutoff_date
+
+    X_train, y_train = df[mask].drop(target_column_name, axis=1), df[mask][target_column_name]
+    X_test, y_test = df[~mask].drop(target_column_name, axis=1), df[~mask][target_column_name]
 
     return X_train, y_train, X_test, y_test
