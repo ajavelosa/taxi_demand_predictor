@@ -17,4 +17,7 @@ def train_test_split(
     X_train, y_train = df[mask].drop(target_column_name, axis=1), df[mask][target_column_name]
     X_test, y_test = df[~mask].drop(target_column_name, axis=1), df[~mask][target_column_name]
 
+    X_train.reset_index(inplace=True)
+    X_test.reset_index(inplace=True)
+
     return X_train, y_train, X_test, y_test
