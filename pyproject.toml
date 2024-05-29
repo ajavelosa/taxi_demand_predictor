@@ -17,6 +17,7 @@ pickleshare = "^0.7.5"
 scikit-learn = "^1.4.2"
 xgboost = "^2.0.3"
 lightgbm = "^4.3.0"
+optuna = "^3.6.1"
 
 
 [build-system]
