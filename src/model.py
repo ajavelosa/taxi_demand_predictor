@@ -13,7 +13,7 @@ def average_rides_last_4_weeks(X: pd.DataFrame) -> pd.DataFrame:
     - 3 weeks ago
     - 4 weeks ago
     """
-    X['average_rides_last_4_weeks'] = 0.25*(
+    X['average_rides_last_4_weeks'] = 0.25 * (
         X[f'rides_previous_{1*7*24}_hour'] + \
         X[f'rides_previous_{2*7*24}_hour'] + \
         X[f'rides_previous_{3*7*24}_hour'] + \
