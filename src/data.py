@@ -116,7 +116,7 @@ def load_raw_data(
                 # download the file from the NYC website
                 print(f'Downloading file {year}-{month:02d}')
                 download_one_file_of_raw_data(year, month)
-            except FileNotFoundError:
+            except HTTPError:
                 print(f'{year}-{month:02d} file is not available')
                 continue
         else:
