@@ -14,3 +14,5 @@ except KeyError:
 
 FEATURE_GROUP_NAME = 'time_series_hourly_feature_group'
 FEATURE_GROUP_VERSION = 1
+FEATURE_VIEW_NAME = 'time_series_hourly_feature_group'
+FEATURE_VIEW_VERSION = 1
