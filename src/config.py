@@ -12,6 +12,9 @@ try:
 except KeyError:
     raise KeyError('Create a .env file in the project root with the HOPSWORKS_API_KEY')
 
+MODEL_NAME = 'ny_taxi_demand_predictor_next_hour'
+MODEL_VERSION = 1
+
 FEATURE_GROUP_NAME = 'time_series_hourly_feature_group'
 FEATURE_GROUP_VERSION = 1
 FEATURE_VIEW_NAME = 'time_series_hourly_feature_group'
