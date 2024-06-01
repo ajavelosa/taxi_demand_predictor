@@ -59,3 +59,38 @@ def load_batch_of_features_from_store(
     # sort data by location and time
     ts_data.sort_values(by=['pickup_location_id', 'pickup_hour'], inplace=True)
     print(f'{ts_data=}')
+
+    # transpose time-series data as a feature vector for each location
+    x = np.ndarray(shape=(len(location_ids), n_features), dtype='float32')
+
+    for i, location_id in enumerate(location_ids):
+        ts_data_i = ts_data.loc[ts_data.pickup_location_id == location_id, :]
+        ts_data_i = ts_data_i.sort_values(by=['pickup_hour'])
+        x[i, :] = ts_data_i['rides'].values
+
+    features = pd.DataFrame(
+        x,
+        columns=[f'rides_previous_{i+1}_hour' for i in reversed(range(n_features))],
+    )
+    features['pickup_hour'] = current_date
+    features['pickup_location_id'] = location_ids
+
+    return features
+
+def load_model_from_registry():
+
+    import joblib
+    from pathlib import Path
+
+    project = get_hopsworks_project()
+    model_registry = project.get_model_registry()
+
+    model = model_registry.get_model(
+        name=config.MODEL_NAME,
+        version=config.MODEL_VERSION
+    )
+
+    model_dir = model.download()
+    model = joblib.load(Path(model_dir) / 'model.pkl')
+
+    return model
