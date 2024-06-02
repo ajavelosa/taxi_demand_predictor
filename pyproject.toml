@@ -6,7 +6,7 @@ authors = ["Anton J <antonjavelosa@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.9.7 || >3.9.7,<3.10"
+python = ">=3.9,<3.9.7 || >3.9.7,<3.12"
 pandas = "1.5.3"
 jupyter = "^1.0.0"
 pyarrow = "^10.0.1"
