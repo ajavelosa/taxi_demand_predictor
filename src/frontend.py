@@ -158,7 +158,7 @@ with st.spinner(text="Plotting time-series data"):
         fig = plot_one_sample(
             example_id=row_id,
             features=features,
-            targets=results['predicted_demand'],
+            targets=predictions_df['predicted_demand'],
             predictions=pd.Series(predictions_df['predicted_demand']),
             display_title=False,
         )
