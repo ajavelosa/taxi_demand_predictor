@@ -7,13 +7,13 @@ import lightgbm as lgb
 
 def average_rides_last_4_weeks(X: pd.DataFrame) -> pd.DataFrame:
     """
-    Adds a column with the average rides from
-    - 1 week ago
-    - 2 weeks ago
-    - 3 weeks ago
-    - 4 weeks ago
+    Adds one column with the average rides from
+    - 07 days ago
+    - 14 days ago
+    - 21 days ago
+    - 28 days ago
     """
-    X['average_rides_last_4_weeks'] = 0.25 * (
+    X['average_rides_last_4_weeks'] = 0.25*(
         X[f'rides_previous_{1*7*24}_hour'] + \
         X[f'rides_previous_{2*7*24}_hour'] + \
         X[f'rides_previous_{3*7*24}_hour'] + \
@@ -21,36 +21,35 @@ def average_rides_last_4_weeks(X: pd.DataFrame) -> pd.DataFrame:
     )
     return X
 
-class TemporalFeatureEngineer(BaseEstimator, TransformerMixin):
-    """
-    Scikit-learn data transformation that adds two columns
-    in the form of numerical features:
-    - hour of day
-    - day of week
-    """
 
-    def fit(self, X: pd.DataFrame, y=None):
+class TemporalFeaturesEngineer(BaseEstimator, TransformerMixin):
+    """
+    Scikit-learn data transformation that adds 2 columns
+    - hour
+    - day_of_week
+    and removes the `pickup_hour` datetime column.
+    """
+    def fit(self, X, y=None):
         return self
 
-    def transform(self, X: pd.DataFrame, y=None) -> pd.DataFrame:
+    def transform(self, X, y=None):
 
         X_ = X.copy()
 
         # Generate numeric columns from datetime
-        X_['hour'] = X_['pickup_hour'].dt.hour
-        X_['day_of_week'] = X_['pickup_hour'].dt.dayofweek
+        X_["hour"] = X_['pickup_hour'].dt.hour
+        X_["day_of_week"] = X_['pickup_hour'].dt.dayofweek
 
         return X_.drop(columns=['pickup_hour'])
 
 def get_pipeline(**hyperparams) -> Pipeline:
-    # sklearn transform
-    add_feature_average_rides_last_4_weeks = FunctionTransformer(
-        average_rides_last_4_weeks,
-        validate=False
-    )
 
     # sklearn transform
-    add_temporal_features = TemporalFeatureEngineer()
+    add_feature_average_rides_last_4_weeks = FunctionTransformer(
+        average_rides_last_4_weeks, validate=False)
+
+    # sklearn transform
+    add_temporal_features = TemporalFeaturesEngineer()
 
     # sklearn pipeline
     return make_pipeline(
