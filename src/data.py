@@ -166,9 +166,16 @@ def add_missing_slots(ts_data: pd.DataFrame) -> pd.DataFrame:
         # keep only rides for this location id
         ts_data_i = ts_data.loc[ts_data.pickup_location_id == location_id, ['pickup_hour', 'rides']]
 
+        if ts_data_i.empty:
+            # add a dummy entry with a 0
+            ts_data_i = pd.DataFrame.from_dict([
+                {'pickup_hour': ts_data['pickup_hour'].max(), 'rides': 0}
+            ])
+
         # quick way to add missing dates with 0 in a Series
         # taken from https://stackoverflow.com/a/19324591
         ts_data_i.set_index('pickup_hour', inplace=True)
+        ts_data_i.index = pd.DatetimeIndex(ts_data_i.index)
         ts_data_i = ts_data_i.reindex(full_range, fill_value=0)
 
         # add back location id columns
