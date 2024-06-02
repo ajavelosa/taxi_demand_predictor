@@ -51,15 +51,19 @@ def load_batch_of_features_from_store(
         start_time=fetch_data_from - timedelta(days=1),
         end_time=fetch_data_to + timedelta(days=1),
     )
-    ts_data = ts_data[ts_data.pickup_hour.between(fetch_data_from, fetch_data_to)]
+    # filter data to the time period we are interested in
+    pickup_ts_from = int(fetch_data_from.timestamp() * 1000)
+    pickup_ts_to = int(fetch_data_to.timestamp() * 1000)
+    ts_data = ts_data[ts_data.pickup_ts.between(pickup_ts_from, pickup_ts_to)]
+
+    # sort data by location and time
+    ts_data.sort_values(by=['pickup_location_id', 'pickup_hour'], inplace=True)
 
     # validate that we are not missing data
     location_ids = ts_data['pickup_location_id'].unique()
     assert len(ts_data) == config.N_FEATURES * len(location_ids), \
         "Time-series data is not complete. Make sure your feature pipeline is up and runnning."
 
-    # sort data by location and time
-    ts_data.sort_values(by=['pickup_location_id', 'pickup_hour'], inplace=True)
     print(f'{ts_data=}')
 
     # transpose time-series data as a feature vector for each location
@@ -76,6 +80,7 @@ def load_batch_of_features_from_store(
     )
     features['pickup_hour'] = current_date
     features['pickup_location_id'] = location_ids
+    features.sort_values(by=['pickup_location_id'], inplace=True)
 
     return features
 
