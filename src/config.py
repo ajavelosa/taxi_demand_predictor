@@ -15,6 +15,11 @@ except KeyError:
 MODEL_NAME = 'ny_taxi_demand_predictor_next_hour'
 MODEL_VERSION = 1
 
+# Added prediction feature group for monitoring purposes
+FEATURE_GROUP_MODEL_PREDICTIONS = 'model_predictions_feature_group'
+FEATURE_VIEW_MODEL_PREDICTIONS = 'model_predictions_feature_view'
+FEATURE_VIEW_MONITORING = 'predictions_vs_actuals_for_monitoring_feature_view'
+
 FEATURE_GROUP_NAME = 'time_series_hourly_feature_group'
 FEATURE_GROUP_VERSION = 1
 FEATURE_VIEW_NAME = 'time_series_hourly_feature_group'
