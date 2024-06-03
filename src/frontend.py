@@ -1,5 +1,5 @@
 import zipfile
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import requests
 import numpy as np
@@ -11,9 +11,8 @@ import geopandas as gpd
 import pydeck as pdk
 
 from src.inference import (
+    load_predictions_from_store,
     load_batch_of_features_from_store,
-    load_model_from_registry,
-    get_model_predictions
 )
 from src.paths import DATA_DIR
 from src.plot import plot_one_sample
@@ -27,7 +26,7 @@ st.header(f'{current_date}')
 
 progress_bar = st.sidebar.header('🔴 Work in progress...')
 progress_bar = st.sidebar.progress(0)
-N_STEPS = 7
+N_STEPS = 6
 
 def load_shape_data_file():
     """
@@ -58,26 +57,82 @@ def load_shape_data_file():
     # load and return shape file
     return gpd.read_file(DATA_DIR / 'taxi_zones/taxi_zones.shp').to_crs('epsg:4326')
 
+@st.cache_data
+def _load_batch_of_features_from_store(current_date: datetime) -> pd.DataFrame:
+    """
+    Wrapped version of src.inference.load_predictions_from_store, so we
+    can add Streamlit caching
+
+    Args:
+        from_pickup_hour (datetime): min datetime (rounded hour) for which we want to get
+        predictions
+
+        to_pickup_hour (datetime): max datetime (rounded hour) for which we want to get
+        predictions
+
+    Returns:
+        pd.DataFrame: 2 columns: pickup_location_id, predicted_demand
+    """
+    return load_batch_of_features_from_store(current_date)
+
+@st.cache_data
+def _load_predictions_from_store(
+    from_pickup_hour: datetime,
+    to_pickup_hour: datetime
+):
+    """
+    Wrapped version of src.inference.load_predictions_from_store, so we
+    can add Streamlit caching
+
+    Args:
+        from_pickup_hour (datetime): min datetime (rounded hour) for which we want to get
+        predictions
+
+        to_pickup_hour (datetime): max datetime (rounded hour) for which we want to get
+        predictions
+
+    Returns:
+        pd.DataFrame: 2 columns: pickup_location_id, predicted_demand
+    """
+    return load_predictions_from_store(from_pickup_hour, to_pickup_hour)
+
 with st.spinner(text='Downloading shape file to plot taxi zones'):
     geo_df = load_shape_data_file()
     st.sidebar.write('✅ Shape file downloaded')
     progress_bar.progress(1/N_STEPS)
 
-with st.spinner(text='Fetching batch of inference data'):
-    features = load_batch_of_features_from_store(current_date)
-    st.sidebar.write('✅ Inference data fetched')
+with st.spinner(text='Fetching model predictions from the store'):
+    predictions_df = _load_predictions_from_store(
+        from_pickup_hour=current_date - timedelta(hours=1),
+        to_pickup_hour=current_date
+    )
+    st.sidebar.write('✅ Model predictions have arrived')
     progress_bar.progress(2/N_STEPS)
-    print(f'{features}')
 
-with st.spinner(text='Loading ML model from registry'):
-    model = load_model_from_registry()
-    st.sidebar.write('✅ Model loaded from registry')
-    progress_bar.progress(3/N_STEPS)
+# Here we are checking the predictions for the current hour have already been computed
+# and are available
+next_hour_predictions_ready = \
+    False if predictions_df[predictions_df.pickup_hour == current_date].empty else True
+prev_hour_predictions_ready = \
+    False if predictions_df[predictions_df.pickup_hour == (current_date - timedelta(hours=1))].empty else True
 
-with st.spinner(text='Predicting taxi demand for the next hour'):
-    results = get_model_predictions(model, features)
-    st.sidebar.write('✅ The model predictions have arrived')
-    progress_bar.progress(4/N_STEPS)
+# breakpoint()
+
+if next_hour_predictions_ready:
+    # predictions for the current hour are available
+    predictions_df = predictions_df[predictions_df.pickup_hour == current_date]
+
+elif prev_hour_predictions_ready:
+    # predictions for current hour are not available, so we use previous hour predictions
+    predictions_df = predictions_df[predictions_df.pickup_hour == (current_date - timedelta(hours=1))]
+    current_date = current_date - timedelta(hours=1)
+    st.subheader('⚠️ The most recent data is not yet available. Using last hour predictions')
+
+else:
+    raise Exception('Features are not available for the last 2 hours. Is your feature \
+                    pipeline up and running? 🤔')
+
+# breakpoint()
 
 with st.spinner(text='Preparing data to plot'):
 
@@ -94,7 +149,7 @@ with st.spinner(text='Preparing data to plot'):
 
     df = pd.merge(
         geo_df,
-        results,
+        predictions_df,
         right_on='pickup_location_id',
         left_on='LocationID',
         how='inner')
@@ -104,7 +159,7 @@ with st.spinner(text='Preparing data to plot'):
     max_pred, min_pred = df.color_scaling.max(), df.color_scaling.min()
     df['fill_color'] = df['color_scaling'].apply(lambda x: pseudocolor(x, min_pred, max_pred, BLACK, GREEN))
     st.sidebar.write('✅ Prepared data for plotting')
-    progress_bar.progress(5/N_STEPS)
+    progress_bar.progress(3/N_STEPS)
 
 with st.spinner(text="Generating NYC Map"):
 
@@ -142,7 +197,12 @@ with st.spinner(text="Generating NYC Map"):
 
     st.pydeck_chart(r)
     st.sidebar.write('✅ Map layer generated')
-    progress_bar.progress(6/N_STEPS)
+    progress_bar.progress(4/N_STEPS)
+
+with st.spinner(text="Fetching batch of features used in the last run"):
+    features_df = _load_batch_of_features_from_store(current_date)
+    st.sidebar.write('✅ Inference features fetched from the store')
+    progress_bar.progress(5/N_STEPS)
 
 with st.spinner(text="Plotting time-series data"):
 
@@ -157,11 +217,11 @@ with st.spinner(text="Plotting time-series data"):
         # plot each time-series with the corresponding prediction
         fig = plot_one_sample(
             example_id=row_id,
-            features=features,
+            features=features_df,
             targets=predictions_df['predicted_demand'],
             predictions=pd.Series(predictions_df['predicted_demand']),
             display_title=False,
         )
         st.plotly_chart(fig, theme="streamlit", use_container_width=True, width=1000)
     st.sidebar.write('✅ Time-series data plotted')
-    progress_bar.progress(7/N_STEPS)
+    progress_bar.progress(6/N_STEPS)
